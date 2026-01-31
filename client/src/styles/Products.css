@@ -1,0 +1,150 @@
+.products-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 90px auto 40px;
+  padding: 0 2rem;
+}
+
+.products-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+  padding-top: 2rem;
+}
+
+.products-header h1 {
+  font-size: 3rem;
+  color: #333;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.products-header p {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.search-box {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 14px 24px;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-box input:focus {
+  border-color: #9B59B6;
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.15);
+}
+
+.category-filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.filter-btn {
+  background-color: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 25px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: capitalize;
+}
+
+.filter-btn:hover {
+  background-color: #f0e6f5;
+  border-color: #7c5295;
+}
+
+.filter-btn.active {
+  background-color: #9B59B6;
+  color: white;
+  border-color: #9B59B6;
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+  transform: translateY(-2px);
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  justify-items: center;
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 0;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.error-banner {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 5px;
+  margin: 1rem 0 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-banner button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.error-banner button:hover {
+  background-color: #c82333;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem 0;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .products-container {
+    padding: 1rem;
+  }
+  
+  .products-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+} 
