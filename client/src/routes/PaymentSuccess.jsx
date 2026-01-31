@@ -13,59 +13,47 @@ const PaymentSuccess = () => {
     console.log('Payment Success - Session ID:', sessionId);
     
     if (!sessionId) {
-      console.log('No session ID, redirecting to home');
-      navigate('/');
+      navigate('/orders');
       return;
     }
 
-    // Check if user is logged in
     const userInfo = localStorage.getItem('userInfo');
     if (!userInfo) {
-      console.log('No user info, redirecting to login');
       navigate('/login');
       return;
     }
 
     const user = JSON.parse(userInfo);
     if (!user.token) {
-      console.log('No user token, redirecting to login');
       navigate('/login');
       return;
     }
 
-    // Check if already processed
     const processedSessions = JSON.parse(localStorage.getItem('processedSessions') || '[]');
     if (processedSessions.includes(sessionId)) {
-      console.log('Session already processed, redirecting to orders');
       navigate('/orders');
       return;
     }
     
-    // Mark as processed immediately
     processedSessions.push(sessionId);
     localStorage.setItem('processedSessions', JSON.stringify(processedSessions));
 
-    // Get checkout data
     const checkoutDataStr = sessionStorage.getItem('checkoutData');
-    console.log('Checkout data:', checkoutDataStr);
     
     if (!checkoutDataStr) {
-      console.log('No checkout data, redirecting to orders');
       clearCart();
-      setTimeout(() => navigate('/orders'), 1500);
+      navigate('/orders');
       return;
     }
 
     const checkoutData = JSON.parse(checkoutDataStr);
     
     if (!checkoutData.items || checkoutData.items.length === 0) {
-      console.log('No items, redirecting to orders');
       clearCart();
-      setTimeout(() => navigate('/orders'), 1500);
+      navigate('/orders');
       return;
     }
 
-    // Create order
     const orderData = {
       orderItems: checkoutData.items.map(item => ({
         name: item.name,
@@ -91,8 +79,6 @@ const PaymentSuccess = () => {
       stripeSessionId: sessionId
     };
 
-    console.log('Creating order:', orderData);
-
     fetch(`${config.API_URL}/orders`, {
       method: 'POST',
       headers: {
@@ -101,21 +87,18 @@ const PaymentSuccess = () => {
       },
       body: JSON.stringify(orderData)
     })
-    .then(response => {
-      console.log('Response status:', response.status);
-      return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
       console.log('Order created:', data);
       clearCart();
       sessionStorage.removeItem('checkoutData');
-      setTimeout(() => navigate('/orders'), 1500);
+      navigate('/orders');
     })
     .catch(error => {
-      console.error('Error creating order:', error);
+      console.error('Error:', error);
       clearCart();
       sessionStorage.removeItem('checkoutData');
-      setTimeout(() => navigate('/orders'), 1500);
+      navigate('/orders');
     });
   }, [searchParams, clearCart, navigate]);
 
@@ -137,7 +120,6 @@ const PaymentSuccess = () => {
         maxWidth: '500px'
       }}>
         <h1>🎉 Payment Successful!</h1>
-        <p>Thank you for your purchase. Your order has been confirmed.</p>
         <p>Redirecting to your orders...</p>
       </div>
     </div>
