@@ -111,9 +111,13 @@ const PaymentSuccess = () => {
 
         // Step 4: Order created successfully - Clean up and redirect
         setStatus('success');
-        // DON'T remove items on success - keep them in cart
+        
+        // Clear cart immediately
         sessionStorage.removeItem('checkoutData');
         localStorage.removeItem('checkoutData');
+        localStorage.removeItem('cart');
+        localStorage.setItem('cart', JSON.stringify([]));
+        
         setTimeout(() => navigate('/orders'), 1500);
 
       } catch (error) {

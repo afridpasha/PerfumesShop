@@ -104,6 +104,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => {
     setCartItems([]);
     localStorage.removeItem('cart');
+    localStorage.setItem('cart', JSON.stringify([]));
   };
 
   const getCartTotal = () => {
