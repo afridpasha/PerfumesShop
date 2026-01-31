@@ -23,7 +23,13 @@ const PaymentSuccess = () => {
       const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || '{}');
       
       if (checkoutData.items && checkoutData.items.length > 0) {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const user = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        
+        if (!user.token) {
+          console.error('No user token found');
+          navigate('/login');
+          return;
+        }
         
         const orderData = {
           orderItems: checkoutData.items.map(item => ({

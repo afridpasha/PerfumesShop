@@ -94,8 +94,8 @@ const createCheckoutSession = async (req, res) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/checkout`,
+      success_url: `${process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000'}/checkout`,
       customer_email: customerInfo.email,
     });
 
