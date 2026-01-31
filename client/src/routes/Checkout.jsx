@@ -166,7 +166,7 @@ const CheckoutForm = () => {
     setError(null);
 
     try {
-      // Store checkout data for PaymentSuccess page
+      // Store checkout data for PaymentSuccess page (both session and local storage)
       const checkoutData = {
         items: cartItems,
         customerInfo,
@@ -174,6 +174,7 @@ const CheckoutForm = () => {
         totals: { subtotal, shipping, tax, total }
       };
       sessionStorage.setItem('checkoutData', JSON.stringify(checkoutData));
+      localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
 
       const response = await fetch(`${config.API_URL}/payment/create-checkout-session`, {
         method: 'POST',
