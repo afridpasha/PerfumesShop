@@ -106,8 +106,30 @@ const createCheckoutSession = async (req, res) => {
   }
 };
 
+// @desc    Verify checkout session
+// @route   POST /api/payment/verify-session
+// @access  Private
+const verifySession = async (req, res) => {
+  try {
+    const stripe = getStripe();
+    const { sessionId } = req.body;
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    res.json({
+      status: session.payment_status,
+      amount: session.amount_total / 100,
+      customerEmail: session.customer_email
+    });
+  } catch (error) {
+    console.error('Session verification error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createPaymentIntent,
   confirmPayment,
   createCheckoutSession,
+  verifySession,
 };

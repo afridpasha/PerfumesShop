@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import config from '../config';
@@ -7,13 +7,13 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { clearCart } = useContext(CartContext);
+  const [status, setStatus] = useState('verifying');
   
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
-    console.log('Payment Success - Session ID:', sessionId);
     
     if (!sessionId) {
-      navigate('/orders');
+      navigate('/checkout');
       return;
     }
 
@@ -29,76 +29,77 @@ const PaymentSuccess = () => {
       return;
     }
 
-    const processedSessions = JSON.parse(localStorage.getItem('processedSessions') || '[]');
-    if (processedSessions.includes(sessionId)) {
-      navigate('/orders');
-      return;
-    }
-    
-    processedSessions.push(sessionId);
-    localStorage.setItem('processedSessions', JSON.stringify(processedSessions));
-
-    const checkoutDataStr = sessionStorage.getItem('checkoutData');
-    
-    if (!checkoutDataStr) {
-      clearCart();
-      navigate('/orders');
-      return;
-    }
-
-    const checkoutData = JSON.parse(checkoutDataStr);
-    
-    if (!checkoutData.items || checkoutData.items.length === 0) {
-      clearCart();
-      navigate('/orders');
-      return;
-    }
-
-    const orderData = {
-      orderItems: checkoutData.items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        image: item.image,
-        price: item.price,
-        size: item.size || '50ml',
-        product: item._id
-      })),
-      shippingAddress: checkoutData.shippingInfo || {
-        address: 'Address not provided',
-        city: 'City not provided',
-        postalCode: '00000',
-        country: 'Country not provided'
-      },
-      paymentMethod: 'Card',
-      itemsPrice: checkoutData.totals?.subtotal || 0,
-      taxPrice: checkoutData.totals?.tax || 0,
-      shippingPrice: checkoutData.totals?.shipping || 0,
-      totalPrice: checkoutData.totals?.total || 0,
-      isPaid: true,
-      paidAt: new Date().toISOString(),
-      stripeSessionId: sessionId
-    };
-
-    fetch(`${config.API_URL}/orders`, {
+    // Verify payment with backend
+    fetch(`${config.API_URL}/payment/verify-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${user.token}`,
       },
-      body: JSON.stringify(orderData)
+      body: JSON.stringify({ sessionId })
     })
     .then(response => response.json())
     .then(data => {
-      console.log('Order created:', data);
-      clearCart();
-      sessionStorage.removeItem('checkoutData');
-      navigate('/orders');
+      if (data.status === 'complete' || data.status === 'paid') {
+        setStatus('success');
+        
+        // Create order
+        const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || '{}');
+        
+        if (checkoutData.items && checkoutData.items.length > 0) {
+          const orderData = {
+            orderItems: checkoutData.items.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              image: item.image,
+              price: item.price,
+              size: item.size || '50ml',
+              product: item._id
+            })),
+            shippingAddress: checkoutData.shippingInfo || {
+              address: 'Address not provided',
+              city: 'City not provided',
+              postalCode: '00000',
+              country: 'Country not provided'
+            },
+            paymentMethod: 'Card',
+            itemsPrice: checkoutData.totals?.subtotal || 0,
+            taxPrice: checkoutData.totals?.tax || 0,
+            shippingPrice: checkoutData.totals?.shipping || 0,
+            totalPrice: checkoutData.totals?.total || 0,
+            isPaid: true,
+            paidAt: new Date().toISOString(),
+            stripeSessionId: sessionId
+          };
+
+          return fetch(`${config.API_URL}/orders`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`,
+            },
+            body: JSON.stringify(orderData)
+          });
+        }
+      } else {
+        setStatus('failed');
+        setTimeout(() => navigate('/checkout'), 2000);
+      }
+    })
+    .then(response => {
+      if (response) return response.json();
+    })
+    .then(data => {
+      if (data) {
+        clearCart();
+        sessionStorage.removeItem('checkoutData');
+        navigate('/orders');
+      }
     })
     .catch(error => {
       console.error('Error:', error);
-      clearCart();
-      sessionStorage.removeItem('checkoutData');
-      navigate('/orders');
+      setStatus('error');
+      setTimeout(() => navigate('/checkout'), 2000);
     });
   }, [searchParams, clearCart, navigate]);
 
@@ -113,14 +114,36 @@ const PaymentSuccess = () => {
       padding: '2rem'
     }}>
       <div style={{ 
-        background: '#4CAF50', 
+        background: status === 'success' ? '#4CAF50' : status === 'failed' ? '#f44336' : '#2196F3',
         color: 'white', 
         padding: '2rem', 
         borderRadius: '10px',
         maxWidth: '500px'
       }}>
-        <h1>🎉 Payment Successful!</h1>
-        <p>Redirecting to your orders...</p>
+        {status === 'verifying' && (
+          <>
+            <h1>⏳ Verifying Payment...</h1>
+            <p>Please wait while we confirm your payment.</p>
+          </>
+        )}
+        {status === 'success' && (
+          <>
+            <h1>🎉 Payment Successful!</h1>
+            <p>Redirecting to your orders...</p>
+          </>
+        )}
+        {status === 'failed' && (
+          <>
+            <h1>❌ Payment Failed</h1>
+            <p>Redirecting back to checkout...</p>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <h1>⚠️ Error</h1>
+            <p>Something went wrong. Redirecting...</p>
+          </>
+        )}
       </div>
     </div>
   );
