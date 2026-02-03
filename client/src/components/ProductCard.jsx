@@ -15,7 +15,7 @@ const ProductCard = ({ product }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('userInfo'));
     if (!user) {
       navigate('/login');
       return;

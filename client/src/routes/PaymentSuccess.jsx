@@ -1,37 +1,60 @@
-import React, { useEffect, useContext, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CartContext } from '../context/CartContext';
 import config from '../config';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { removeOrderedItems } = useContext(CartContext);
   const [status, setStatus] = useState('verifying');
+  const [message, setMessage] = useState('Verifying your payment...');
   
   useEffect(() => {
-    const verifyAndCreateOrder = async () => {
+    const verifyPayment = async () => {
       const sessionId = searchParams.get('session_id');
       
       if (!sessionId) {
-        navigate('/checkout');
+        console.log('No session ID found');
+        navigate('/checkout', { replace: true });
         return;
       }
 
-      const userInfo = localStorage.getItem('user');
+      // Restore userInfo from sessionStorage if not in localStorage
+      let userInfo = localStorage.getItem('userInfo');
       if (!userInfo) {
-        navigate('/login');
+        userInfo = sessionStorage.getItem('userInfo');
+        if (userInfo) {
+          localStorage.setItem('userInfo', userInfo);
+          console.log('Restored userInfo from sessionStorage');
+        }
+      }
+      
+      console.log('Checking userInfo:', userInfo ? 'exists' : 'not found');
+      
+      if (!userInfo) {
+        console.log('No user info, redirecting to login');
+        navigate('/login', { replace: true });
         return;
       }
 
-      const user = JSON.parse(userInfo);
-      if (!user.token) {
-        navigate('/login');
+      let user;
+      try {
+        user = JSON.parse(userInfo);
+        console.log('User parsed successfully, has token:', !!user.token);
+      } catch (e) {
+        console.log('Failed to parse user info');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      if (!user || !user.token) {
+        console.log('No user token found');
+        navigate('/login', { replace: true });
         return;
       }
 
       try {
-        // Step 1: Verify payment with Stripe via backend
+        console.log('Verifying payment with session ID:', sessionId);
+        
         const verifyResponse = await fetch(`${config.API_URL}/payment/verify-session`, {
           method: 'POST',
           headers: {
@@ -41,32 +64,37 @@ const PaymentSuccess = () => {
           body: JSON.stringify({ sessionId })
         });
 
-        const paymentData = await verifyResponse.json();
-        
-        // Get checkout data early for both success and failure cases
-        let checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || 'null');
-        if (!checkoutData || !checkoutData.items || checkoutData.items.length === 0) {
-          checkoutData = JSON.parse(localStorage.getItem('checkoutData') || 'null');
+        if (!verifyResponse.ok) {
+          throw new Error('Failed to verify payment');
         }
+
+        const paymentData = await verifyResponse.json();
+        console.log('Payment verification result:', paymentData);
         
-        // Step 2: Check if payment is successful
         if (paymentData.status !== 'paid') {
+          console.log('Payment not completed, status:', paymentData.status);
           setStatus('failed');
-          // Remove failed order items from cart
-          if (checkoutData && checkoutData.items) {
-            removeOrderedItems(checkoutData.items);
-          }
-          sessionStorage.removeItem('checkoutData');
-          localStorage.removeItem('checkoutData');
-          setTimeout(() => navigate('/checkout'), 2000);
+          setMessage('Payment was not completed. Redirecting to checkout...');
+          setTimeout(() => navigate('/checkout', { replace: true }), 2000);
           return;
         }
 
-        // Step 3: Payment confirmed - Create order
-        setStatus('creating_order');
+        console.log('Payment successful! Creating order...');
+        setStatus('creating');
+        setMessage('Payment confirmed! Creating your order...');
+        
+        const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || 'null');
         
         if (!checkoutData || !checkoutData.items || checkoutData.items.length === 0) {
-          throw new Error('No order items found. Please try placing your order again.');
+          console.log('No checkout data found, but payment was successful');
+          localStorage.removeItem('cart');
+          localStorage.setItem('cart', JSON.stringify([]));
+          sessionStorage.removeItem('checkoutData');
+          
+          setStatus('success');
+          setMessage('Payment successful! Redirecting to orders...');
+          navigate('/orders', { replace: true });
+          return;
         }
 
         const orderData = {
@@ -94,6 +122,8 @@ const PaymentSuccess = () => {
           stripeSessionId: sessionId
         };
 
+        console.log('Creating order with data:', orderData);
+
         const orderResponse = await fetch(`${config.API_URL}/orders`, {
           method: 'POST',
           headers: {
@@ -103,41 +133,53 @@ const PaymentSuccess = () => {
           body: JSON.stringify(orderData)
         });
 
-        const orderResult = await orderResponse.json();
-
         if (!orderResponse.ok) {
-          throw new Error(orderResult.message || 'Failed to create order');
+          const errorData = await orderResponse.json();
+          throw new Error(errorData.message || 'Failed to create order');
         }
 
-        // Step 4: Order created successfully - Clean up and redirect
-        setStatus('success');
-        
-        // Clear cart immediately
-        sessionStorage.removeItem('checkoutData');
-        localStorage.removeItem('checkoutData');
+        const orderResult = await orderResponse.json();
+        console.log('Order created successfully:', orderResult);
+
         localStorage.removeItem('cart');
         localStorage.setItem('cart', JSON.stringify([]));
+        sessionStorage.removeItem('checkoutData');
         
-        setTimeout(() => navigate('/orders'), 1500);
+        setStatus('success');
+        setMessage('Order created successfully! Redirecting...');
+        
+        navigate('/orders', { replace: true });
 
       } catch (error) {
-        console.error('Payment verification error:', error);
+        console.error('Error during payment verification:', error);
         setStatus('error');
-        
-        // Remove failed order items from cart on error
-        const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || localStorage.getItem('checkoutData') || 'null');
-        if (checkoutData && checkoutData.items) {
-          removeOrderedItems(checkoutData.items);
-        }
-        sessionStorage.removeItem('checkoutData');
-        localStorage.removeItem('checkoutData');
-        
-        setTimeout(() => navigate('/checkout'), 2000);
+        setMessage('An error occurred. Redirecting to checkout...');
+        setTimeout(() => navigate('/checkout', { replace: true }), 2000);
       }
     };
 
-    verifyAndCreateOrder();
-  }, [searchParams, removeOrderedItems, navigate]);
+    verifyPayment();
+  }, [searchParams, navigate]);
+
+  const getBackgroundColor = () => {
+    switch (status) {
+      case 'success': return '#4CAF50';
+      case 'failed': return '#f44336';
+      case 'error': return '#ff9800';
+      default: return '#2196F3';
+    }
+  };
+
+  const getIcon = () => {
+    switch (status) {
+      case 'verifying': return '⏳';
+      case 'creating': return '✅';
+      case 'success': return '🎉';
+      case 'failed': return '❌';
+      case 'error': return '⚠️';
+      default: return '⏳';
+    }
+  };
 
   return (
     <div style={{ 
@@ -150,42 +192,22 @@ const PaymentSuccess = () => {
       padding: '2rem'
     }}>
       <div style={{ 
-        background: status === 'success' ? '#4CAF50' : status === 'failed' || status === 'error' ? '#f44336' : '#2196F3',
+        background: getBackgroundColor(),
         color: 'white', 
         padding: '2rem', 
         borderRadius: '10px',
-        maxWidth: '500px'
+        maxWidth: '500px',
+        minWidth: '300px'
       }}>
-        {status === 'verifying' && (
-          <>
-            <h1>⏳ Verifying Payment...</h1>
-            <p>Please wait while we confirm your payment with Stripe.</p>
-          </>
-        )}
-        {status === 'creating_order' && (
-          <>
-            <h1>✅ Payment Confirmed!</h1>
-            <p>Creating your order...</p>
-          </>
-        )}
-        {status === 'success' && (
-          <>
-            <h1>🎉 Order Created Successfully!</h1>
-            <p>Redirecting to your orders...</p>
-          </>
-        )}
-        {status === 'failed' && (
-          <>
-            <h1>❌ Payment Not Completed</h1>
-            <p>Redirecting back to checkout...</p>
-          </>
-        )}
-        {status === 'error' && (
-          <>
-            <h1>⚠️ Error</h1>
-            <p>Something went wrong. Redirecting to checkout...</p>
-          </>
-        )}
+        <h1 style={{ fontSize: '3rem', margin: '0 0 1rem 0' }}>{getIcon()}</h1>
+        <h2 style={{ margin: '0 0 1rem 0' }}>
+          {status === 'verifying' && 'Verifying Payment'}
+          {status === 'creating' && 'Creating Order'}
+          {status === 'success' && 'Success!'}
+          {status === 'failed' && 'Payment Failed'}
+          {status === 'error' && 'Error'}
+        </h2>
+        <p style={{ margin: 0 }}>{message}</p>
       </div>
     </div>
   );

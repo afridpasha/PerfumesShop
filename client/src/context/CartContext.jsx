@@ -25,7 +25,7 @@ export const CartProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const user = JSON.parse(localStorage.getItem('user'));
+      const user = JSON.parse(localStorage.getItem('userInfo'));
       if (!user) {
         throw new Error('Please login to add items to cart');
       }

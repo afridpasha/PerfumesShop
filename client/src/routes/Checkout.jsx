@@ -33,14 +33,18 @@ const CheckoutForm = () => {
 
   // Get customer info from localStorage on component mount
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('User data from localStorage:', user); // Debug log
-    
-    if (user) {
-      setCustomerInfo({
-        name: user.fullName || user.name || '',
-        email: user.email || '',
-      });
+    const userInfo = localStorage.getItem('userInfo');
+    if (userInfo) {
+      try {
+        const user = JSON.parse(userInfo);
+        console.log('User data from localStorage:', user);
+        setCustomerInfo({
+          name: user.fullName || '',
+          email: user.email || '',
+        });
+      } catch (e) {
+        console.error('Failed to parse user info:', e);
+      }
     }
   }, []);
 
@@ -157,7 +161,10 @@ const CheckoutForm = () => {
   const handleCheckout = async (e) => {
     e.preventDefault();
 
-    if (!customerInfo.name || !customerInfo.email) {
+    // Validate all required fields
+    if (!customerInfo.name || !customerInfo.email || 
+        !shippingInfo.address || !shippingInfo.city || 
+        !shippingInfo.postalCode || !shippingInfo.country) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -176,11 +183,30 @@ const CheckoutForm = () => {
       sessionStorage.setItem('checkoutData', JSON.stringify(checkoutData));
       localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
 
+      // Save user info before redirect
+      const userInfo = localStorage.getItem('userInfo');
+      if (!userInfo) {
+        setError('Please login to continue');
+        setProcessing(false);
+        return;
+      }
+      
+      sessionStorage.setItem('userInfo', userInfo);
+      
+      let token;
+      try {
+        token = JSON.parse(userInfo).token;
+      } catch (e) {
+        setError('Invalid user session. Please login again.');
+        setProcessing(false);
+        return;
+      }
+
       const response = await fetch(`${config.API_URL}/payment/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user')).token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           items: cartItems.map(item => ({

@@ -15,7 +15,7 @@ const Orders = () => {
 
   useEffect(() => {
     // Check if user is logged in
-    const userInfo = localStorage.getItem('user');
+    const userInfo = localStorage.getItem('userInfo');
     if (!userInfo) {
       navigate('/login');
       return;
@@ -27,7 +27,7 @@ const Orders = () => {
 
   const fetchOrders = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(localStorage.getItem('userInfo') || '{}');
       const response = await fetch(`${config.API_URL}/orders/myorders`, {
         headers: {
           'Authorization': `Bearer ${user.token}`,

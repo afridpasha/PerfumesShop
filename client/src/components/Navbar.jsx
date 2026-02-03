@@ -7,12 +7,12 @@ import { FaShoppingCart, FaBoxOpen } from 'react-icons/fa';
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem('userInfo'));
   const { cartItems } = useContext(CartContext);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('userInfo');
     navigate('/login');
   };
 

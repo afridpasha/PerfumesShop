@@ -28,7 +28,7 @@ const LoginPage = () => {
 
       // Store token and user data
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data));
+      localStorage.setItem('userInfo', JSON.stringify(data));
       
       // Redirect to home page
       navigate('/');
